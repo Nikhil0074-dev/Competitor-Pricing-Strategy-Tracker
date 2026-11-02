@@ -4,8 +4,14 @@ A FastAPI application for tracking public competitor pricing pages. It captures 
 
 ![screenshots](diagram.png)
 
+![screenshots](screenshots/01-login.pngpng)
+![screenshots](screenshots/02-dashboard.png)
+![screenshots](screenshots/03-competitors.png)
+![screenshots](screenshots/04-pricing.png)
+![screenshots](screenshots/05-timeline.png)
+![screenshots](screenshots/06-reports.png)
+![screenshots](screenshots/07-profile.png)
 
-![screenshots](screenshots/diagram.png)
 ## Features
 
 - User registration and login, with a separate workspace created for each new account.
