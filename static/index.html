@@ -1,0 +1,62 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Competitor Tracker</title><style>
+:root{--bg:#eef1f4;--ink:#14212b;--mute:#5b6b78;--line:#cfd7de;--card:#fff;--accent:#0b6e8a;--up:#b3261e;--down:#1b7f4b;--warn:#8a5a00}
+@media(prefers-color-scheme:dark){:root{--bg:#10181e;--ink:#e6edf2;--mute:#97a8b5;--line:#2a3944;--card:#17232b;--accent:#4fb4d0;--up:#ff8a80;--down:#6fd3a0;--warn:#e8b64c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "Segoe UI",system-ui,sans-serif}
+.app{display:grid;grid-template-columns:200px 1fr;min-height:100vh}
+nav{border-right:1px solid var(--line);padding:20px 12px;display:flex;flex-direction:column;gap:4px}
+nav h1{font:700 16px Georgia,serif;margin:0 8px 16px}
+nav button{all:unset;cursor:pointer;padding:8px 10px;border-radius:4px;color:var(--mute)}
+nav button:hover,nav button.on{background:var(--card);color:var(--ink)}nav button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding:28px 32px;max-width:1100px}h2{font:700 24px Georgia,serif;margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:16px;margin-bottom:14px}
+.stats{display:flex;gap:14px;flex-wrap:wrap}.stat{min-width:150px}.stat b{font-size:28px;display:block}.stat span{color:var(--mute)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--line)}th{color:var(--mute);font-weight:600}
+input,select,textarea{font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink)}
+textarea{width:100%;min-height:90px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.btn{cursor:pointer;background:var(--accent);color:#fff;border:0;padding:7px 14px;border-radius:4px;font:inherit}.btn.alt{background:none;color:var(--accent);border:1px solid var(--accent)}
+.tag{font-size:12px;padding:1px 8px;border-radius:10px;border:1px solid var(--line)}.PRICE_INCREASE{color:var(--up);border-color:var(--up)}.PRICE_DECREASE{color:var(--down);border-color:var(--down)}
+.PAGE_UNAVAILABLE,.EXTRACTION_REVIEW_REQUIRED{color:var(--warn);border-color:var(--warn)}.mute{color:var(--mute)}.err{color:var(--up)}
+.shots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}.shots img{width:100%;border:1px solid var(--line)}.shots small{color:var(--mute)}
+.login{max-width:340px;margin:12vh auto}pre{white-space:pre-wrap}
+@media(max-width:700px){.app{grid-template-columns:1fr}nav{flex-direction:row;flex-wrap:wrap;border:0}main{padding:16px}.shots{grid-template-columns:1fr}}
+</style></head><body><div id="root"></div><script>
+const T=()=>localStorage.getItem("t"),$=s=>document.querySelector(s),esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function api(p,o={}){const r=await fetch("/api/v1"+p,{...o,headers:{"Content-Type":"application/json",Authorization:"Bearer "+T(),...(o.headers||{})}});
+ if(r.status===401){localStorage.removeItem("t");render();throw 0}const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.detail||r.statusText);return j}
+const post=(p,b)=>api(p,{method:"POST",body:JSON.stringify(b||{})});
+let view="dash";const views={dash,comps,pricing,timeline,reports,profile};
+const names={dash:"Dashboard",comps:"Competitors",pricing:"Pricing",timeline:"Timeline",reports:"Reports",profile:"My product"};
+function render(){const root=$("#root");if(!T()){root.innerHTML=`<div class="login card"><h2>Competitor Tracker</h2><div class="row"><input id="em" type="email" placeholder="Email" aria-label="Email"></div>
+<div class="row"><input id="pw" type="password" placeholder="Password (8+ characters)" aria-label="Password"></div><div class="row"><button class="btn" id="in">Sign in</button><button class="btn alt" id="up">Create account</button></div><p class="err" id="msg"></p></div>`;
+ const go=u=>async()=>{try{const r=await fetch("/api/v1/auth/"+u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:$("#em").value,password:$("#pw").value})});const j=await r.json();if(!r.ok)throw new Error(j.detail);localStorage.setItem("t",j.token);render()}catch(e){$("#msg").textContent=e.message}};
+ $("#in").onclick=go("login");$("#up").onclick=go("register");return}
+ root.innerHTML=`<div class="app"><nav><h1>Competitor Tracker</h1>${Object.entries(names).map(([k,v])=>`<button data-v="${k}" class="${k===view?"on":""}">${v}</button>`).join("")}<button id="out">Sign out</button></nav><main id="m"></main></div>`;
+ document.querySelectorAll("nav [data-v]").forEach(b=>b.onclick=()=>{view=b.dataset.v;render()});$("#out").onclick=()=>{localStorage.removeItem("t");render()};views[view]().catch(e=>e&&($("#m").innerHTML=`<p class="err">${esc(e.message)}</p>`))}
+const tag=e=>`<span class="tag ${e}">${e.replaceAll("_"," ").toLowerCase()}</span>`;
+async function dash(){const[c,p,e,j]=await Promise.all([api("/competitors"),api("/monitored-pages"),api("/change-events"),api("/jobs")]);
+ const n=(t)=>e.filter(x=>x.event_type===t).length;
+ $("#m").innerHTML=`<h2>Dashboard</h2><div class="stats">${[["Competitors",c.length],["Monitored pages",p.length],["Changes detected",e.length],["Price increases",n("PRICE_INCREASE")],["Price decreases",n("PRICE_DECREASE")],["Failed scans",j.filter(x=>x.status==="FAILED").length]].map(([a,b])=>`<div class="card stat"><b>${b}</b><span>${a}</span></div>`).join("")}</div>
+ <div class="card"><h3>Latest events</h3>${e.length?e.slice(0,6).map(x=>`<p>${tag(x.event_type)} <b>${esc(x.competitor)}</b> ${esc(x.summary)}</p>`).join(""):'<p class="mute">No changes yet. Add a competitor, register its pricing page, then scan twice.</p>'}</div>`}
+async function comps(){const[c,p]=await Promise.all([api("/competitors"),api("/monitored-pages")]);
+ $("#m").innerHTML=`<h2>Competitors</h2><div class="card"><div class="row"><input id="cn" placeholder="Company name" aria-label="Company name"><input id="cu" placeholder="https://example.com" size="30" aria-label="Website URL"><button class="btn" id="ca">Add competitor</button></div><p class="err" id="msg"></p></div>
+ ${c.length?c.map(x=>`<div class="card"><b>${esc(x.name)}</b> <span class="mute">${esc(x.website_url)}</span>
+ ${p.filter(g=>g.competitor_id===x.id).map(g=>`<div class="row"><span>${esc(g.url)}</span><span class="mute">last scan ${esc(g.last_success_at||"never")}</span><button class="btn alt" data-scan="${g.id}">Scan now</button></div>`).join("")}
+ <div class="row"><input data-url="${x.id}" placeholder="Pricing page URL" size="40" aria-label="Pricing page URL"><button class="btn alt" data-addp="${x.id}">Monitor page</button></div></div>`).join(""):'<p class="mute">No competitors yet. Add one above.</p>'}`;
+ const fail=e=>$("#msg")&&($("#msg").textContent=e.message);
+ $("#ca").onclick=()=>post("/competitors",{name:$("#cn").value,website_url:$("#cu").value}).then(comps).catch(fail);
+ document.querySelectorAll("[data-addp]").forEach(b=>b.onclick=()=>post("/monitored-pages",{competitor_id:+b.dataset.addp,url:$(`[data-url="${b.dataset.addp}"]`).value}).then(comps).catch(e=>alert(e.message)));
+ document.querySelectorAll("[data-scan]").forEach(b=>b.onclick=async()=>{b.textContent="Scanning…";b.disabled=true;const r=await post(`/monitored-pages/${b.dataset.scan}/scan`);alert(r.status==="DONE"?(r.baseline?"Baseline saved.":r.events+" change(s) found."):"Scan failed: "+r.error_code);comps()})}
+async function pricing(){const r=await api("/pricing");
+ $("#m").innerHTML=`<h2>Pricing</h2><div class="card">${r.length?`<table><tr><th>Competitor</th><th>Plan</th><th>Displayed price</th><th>Interval</th><th>Basis</th><th>Status</th><th>Observed</th></tr>${r.map(x=>`<tr><td>${esc(x.competitor)}</td><td>${esc(x.plan_name)}</td><td>${esc(x.displayed_price||"unknown")}</td><td>${esc(x.billing_interval||"-")}</td><td>${esc(x.billing_basis)}</td><td>${esc(x.status)}</td><td>${esc(x.captured_at.slice(0,16))}</td></tr>`).join("")}</table><p class="mute">Prices are shown as displayed. Check currency, interval and billing basis before comparing.</p>`:'<p class="mute">No pricing captured yet.</p>'}</div>`}
+async function timeline(){const[e,d]=await Promise.all([api("/change-events"),api("/visual-diffs")]);const t=T();
+ $("#m").innerHTML=`<h2>Timeline</h2>${e.length?e.map(x=>{const df=d.find(y=>y.prev_snapshot===x.prev_snapshot&&y.cur_snapshot===x.cur_snapshot);
+ return`<div class="card">${tag(x.event_type)} <b>${esc(x.competitor)}</b> <span class="mute">${esc(x.detected_at.replace("T"," ").slice(0,16))} · severity ${esc(x.severity)} · review ${esc(x.review_status)}</span><p>${esc(x.summary)}</p>
+ ${df?`<div class="shots"><div><small>Before</small><img alt="Previous screenshot" src="/api/v1/snapshots/${x.prev_snapshot}/screenshot?token=${t}"></div><div><small>After</small><img alt="Current screenshot" src="/api/v1/snapshots/${x.cur_snapshot}/screenshot?token=${t}"></div><div><small>Difference (${df.changed_pct.toFixed(2)}% of pixels)</small><img alt="Difference" src="/api/v1/visual-diffs/${df.id}/image?token=${t}"></div></div>`:""}</div>`}).join(""):'<div class="card mute">No events yet. The first scan stores a baseline; changes appear from the second scan.</div>'}`}
+async function reports(){const r=await api("/reports");const t=T();
+ $("#m").innerHTML=`<h2>Reports</h2><div class="card"><button class="btn" id="gr">Generate report</button></div>${r.map(x=>`<div class="card"><b>${esc(x.title)} #${x.id}</b> <span class="mute">${esc(x.created_at)}</span><div class="row"><a href="/api/v1/reports/${x.id}/markdown?token=${t}" target="_blank">Markdown</a><a href="/api/v1/reports/${x.id}/pdf?token=${t}" target="_blank">PDF</a><button class="btn alt" data-v="${x.id}">Preview</button></div><pre id="p${x.id}"></pre></div>`).join("")}`;
+ $("#gr").onclick=()=>post("/reports").then(reports);document.querySelectorAll("[data-v]").forEach(b=>b.onclick=async()=>{$("#p"+b.dataset.v).textContent=await(await fetch(`/api/v1/reports/${b.dataset.v}/markdown?token=${t}`)).text()})}
+async function profile(){const p=await api("/product-profile");
+ $("#m").innerHTML=`<h2>My product</h2><div class="card"><p class="mute">Used as the baseline for gap analysis. One feature per line.</p><div class="row"><input id="pn" placeholder="Product name" value="${esc(p.name)}" aria-label="Product name"></div><textarea id="pf" aria-label="Features">${esc(p.features)}</textarea><div class="row"><button class="btn" id="ps">Save profile</button><span id="ok" class="mute"></span></div></div>`;
+ $("#ps").onclick=()=>api("/product-profile",{method:"PUT",body:JSON.stringify({name:$("#pn").value,features:$("#pf").value})}).then(()=>$("#ok").textContent="Saved")}
+render();</script></body></html>
