@@ -2,9 +2,10 @@
 
 A FastAPI application for tracking public competitor pricing pages. It captures page text and optional screenshots, extracts plan and feature information, records changes between successful scans, and generates Markdown and PDF reports.
 
+![screenshots](diagram.png)
+
+
 ![screenshots](screenshots/diagram.png)
-
-
 ## Features
 
 - User registration and login, with a separate workspace created for each new account.
