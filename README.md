@@ -200,18 +200,3 @@ screenshots/         Demo-generated UI screenshots
 - Session tokens are long-lived, and query-string authentication for media/report routes has weaker exposure characteristics than header-based authentication.
 - Tests use synthetic pages; validate behavior on permitted target sites before relying on results.
 
-## Troubleshooting
-
-**Screenshots fail but scans complete:** run `python -m playwright install chromium` for local development and inspect the scan's snapshot record. Screenshot capture is best-effort and does not determine whether the text scan succeeds.
-
-**A page is rejected:** verify its URL uses HTTP or HTTPS, has no embedded username/password, resolves to public IP addresses, and is not blocked by the target site's robots.txt policy.
-
-**Pricing is missing or inaccurate:** inspect the site's HTML structure and compare it with the supported plan/tier selectors. Unsupported markup or unfamiliar price formats may require extractor changes and additional tests.
-
-**Local fixture URLs fail in a manual test:** private/loopback targets are blocked by default. The test suite and demo set `ALLOW_PRIVATE=1` for their local synthetic server; do not use that setting on a public deployment.
-
-**The database appears empty after a container restart:** confirm that a persistent volume is mounted at `/data` and that the container is using the same volume.
-
-## License
-
-No license file is currently included. Add the license terms that apply to this project before distributing it.
